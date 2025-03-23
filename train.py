@@ -44,6 +44,8 @@ import open3d as o3d
 
 import copy
 
+from scene.model_utils import Discriminator
+
 def seed_everything(seed):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -62,6 +64,11 @@ def training(dataset, opt, pipe, args):
             args.save_iterations, args.checkpoint_iterations, args.start_checkpoint, args.debug_from
     first_iter = 0
     tb_writer = prepare_output_and_logger(dataset)
+
+    discriminator = Discriminator(input_channels=3).cuda()
+    discriminator_optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-4, betas=(0.5, 0.999))
+    adversarial_loss = torch.nn.BCELoss()  # 对抗损失
+
     gaussians = GaussianModel(args)
     scene = Scene(args, gaussians, shuffle=False)
     print(f"scene.bounds is {scene.bounds}")
@@ -185,7 +192,23 @@ def training(dataset, opt, pipe, args):
                                 if i != j:
                                     LossDict[f"loss_gs{i}"] += loss_photometric(RenderDict[f"image_pseudo_co_gs{i}"], RenderDict[f"image_pseudo_co_gs{j}"].clone().detach(), opt=opt) / (args.gaussiansN - 1)
 
-            
+                # discriminator
+                if args.add_discriminator:
+                    # 计算判别器得分
+                    score_real = discriminator(RenderDict[f"image_pseudo_co_gs{0}"])  # 当前高斯场
+                    score_fake = discriminator(RenderDict[f"image_pseudo_co_gs{1}"].clone().detach())  # 另一个高斯场（不回传梯度）
+
+                    # 计算判别器的 loss
+                    real_labels = torch.ones_like(score_real)
+                    fake_labels = torch.zeros_like(score_fake)
+
+                    dis_loss_real = adversarial_loss(score_real, real_labels)  #对于model0，判别器应该认为是1
+                    dis_loss_fake = adversarial_loss(score_fake, fake_labels)  #对于model1，判别器应该认为是0
+
+                    discriminator_optimizer.zero_grad()
+                    dis_loss = ( dis_loss_real + dis_loss_fake ) * 0.5
+                    dis_loss.backward()
+                    discriminator_optimizer.step()
 
 
         loss = LossDict["loss_gs0"]
@@ -448,6 +471,7 @@ if __name__ == "__main__":
     parser.add_argument('--coprune_threshold', type=int, default=5)
 
     parser.add_argument("--save_log_images", action="store_true")
+    parser.add_argument("--add_discriminator", action="store_true")
 
     # parser.add_argument("--absdensify", action="store_true")
 
