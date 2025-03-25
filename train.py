@@ -196,7 +196,7 @@ def training(dataset, opt, pipe, args):
                 if args.add_discriminator:
                     # 计算判别器得分
                     score_real = discriminator(RenderDict[f"image_pseudo_co_gs{0}"])  # 当前高斯场
-                    score_fake = discriminator(RenderDict[f"image_pseudo_co_gs{1}"].clone().detach())  # 另一个高斯场（不回传梯度）
+                    score_fake = discriminator(RenderDict[f"image_pseudo_co_gs{1}"])  # 另一个高斯场
 
                     # 计算判别器的 loss
                     real_labels = torch.ones_like(score_real)
@@ -207,6 +207,7 @@ def training(dataset, opt, pipe, args):
 
                     discriminator_optimizer.zero_grad()
                     dis_loss = ( dis_loss_real + dis_loss_fake ) * 0.5
+                    LossDict["loss_gs0"] += dis_loss * args.lambda_dis_loss 
                     dis_loss.backward()
                     discriminator_optimizer.step()
 
@@ -472,6 +473,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--save_log_images", action="store_true")
     parser.add_argument("--add_discriminator", action="store_true")
+    parser.add_argument("--lambda_dis_loss", type=float, default=0.1, help="Weight for discriminator loss in total loss")
 
     # parser.add_argument("--absdensify", action="store_true")
 

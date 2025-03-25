@@ -191,7 +191,7 @@ def pipeline(scene, base_path, n_views):
     os.system('colmap stereo_fusion --workspace_path dense --output_path dense/fused.ply')
 
 
-for scene in ['fern', 'flower', 'fortress',  'horns',  'leaves',  'orchids',  'room',  'trex']:# ['bonsai', 'counter', 'garden', 'kitchen', 'room', 'stump']:
-    pipeline(scene, base_path = '/data1/gary/data/debug/nerf_llff_data/', n_views = 6)  # please use absolute path!
+# for scene in ['fern', 'flower', 'fortress',  'horns',  'leaves',  'orchids',  'room',  'trex']:# ['bonsai', 'counter', 'garden', 'kitchen', 'room', 'stump']:
+#     pipeline(scene, base_path = '/data1/gary/data/debug/nerf_llff_data/', n_views = 6)  # please use absolute path!
 
-# pipeline('fern', base_path = '/data1/gary/data/debug/nerf_llff_data/', n_views = 3)
+pipeline('fern', base_path = '/root/autodl-tmp/data/nerf_llff_data/', n_views = 3)
